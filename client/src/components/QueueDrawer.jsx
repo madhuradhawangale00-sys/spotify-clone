@@ -1,9 +1,9 @@
 import React from 'react';
-import { X, Play, Sliders } from 'lucide-react';
+import { X, Play } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 
 const QueueDrawer = () => {
-  const { isQueueOpen, setIsQueueOpen, queue, currentTrack, isPlaying, playTrack } = usePlayer();
+  const { isQueueOpen, setIsQueueOpen, queue, currentTrack, playTrack } = usePlayer();
 
   if (!isQueueOpen) return null;
 

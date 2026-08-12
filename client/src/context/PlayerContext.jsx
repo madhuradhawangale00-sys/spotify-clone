@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { MOCK_SONGS, MOCK_PLAYLISTS, MOCK_ALBUMS, MOCK_ARTISTS } from '../data/mockData';
 
 const PlayerContext = createContext();
@@ -45,6 +45,110 @@ export const PlayerProvider = ({ children }) => {
     }
   }, [volume, isMuted]);
 
+  const stopSynthPlayback = useCallback(() => {
+    synthNodesRef.current.forEach((osc) => {
+      try { osc.stop(); osc.disconnect(); } catch (_) {}
+    });
+    synthNodesRef.current = [];
+  }, []);
+
+  // Web Audio Procedural Synth Sound Generator (Guarantees real sound even offline/CORS blocked)
+  const startSynthPlayback = useCallback(() => {
+    try {
+      stopSynthPlayback();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioCtx();
+        const gainNode = audioCtxRef.current.createGain();
+        gainNode.connect(audioCtxRef.current.destination);
+        audioCtxRef.current.gainNode = gainNode;
+      }
+
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+
+      const gainNode = audioCtxRef.current.gainNode;
+      gainNode.gain.value = (isMuted ? 0 : volume) * 0.15;
+
+      // Chord frequencies based on track index
+      const baseFreqs = [220, 261.63, 329.63, 392.00, 440];
+      const trackIndex = MOCK_SONGS.findIndex(s => s.id === currentTrack?.id);
+      const root = baseFreqs[trackIndex % baseFreqs.length] || 220;
+      
+      const freqs = [root, root * 1.25, root * 1.5];
+
+      synthNodesRef.current = freqs.map((freq) => {
+        const osc = audioCtxRef.current.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtxRef.current.currentTime);
+        osc.connect(gainNode);
+        osc.start();
+        return osc;
+      });
+    } catch (_) {}
+  }, [currentTrack, isMuted, volume, stopSynthPlayback]);
+
+  // Main Play Track Function (Triggered on song card / playlist row click)
+  const playTrack = useCallback((track, newQueue = null) => {
+    if (newQueue) {
+      setQueue(newQueue);
+    }
+    
+    // Toggle play/pause if clicking currently active track
+    if (currentTrack?.id === track.id) {
+      const audio = audioRef.current;
+      if (audio.paused) {
+        audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(true));
+      } else {
+        audio.pause();
+        stopSynthPlayback();
+        setIsPlaying(false);
+      }
+      return;
+    }
+
+    setCurrentTrack(track);
+    setDuration(track.durationSeconds || 210);
+    setCurrentTime(0);
+
+    const audio = audioRef.current;
+    audio.src = track.audioUrl;
+    audio.currentTime = 0;
+    
+    audio.play()
+      .then(() => {
+        setIsPlaying(true);
+      })
+      .catch(() => {
+        setIsPlaying(true);
+        startSynthPlayback();
+      });
+  }, [currentTrack, stopSynthPlayback, startSynthPlayback]);
+
+  // Next Track in Queue
+  const handleNextTrack = useCallback(() => {
+    if (!queue || queue.length === 0) return;
+    const currentIndex = queue.findIndex(t => t.id === currentTrack?.id);
+    let nextIndex;
+    if (isShuffle) {
+      nextIndex = Math.floor(Math.random() * queue.length);
+    } else {
+      nextIndex = (currentIndex + 1) % queue.length;
+    }
+    playTrack(queue[nextIndex]);
+  }, [queue, currentTrack, isShuffle, playTrack]);
+
+  // Previous Track in Queue
+  const handlePrevTrack = useCallback(() => {
+    if (!queue || queue.length === 0) return;
+    const currentIndex = queue.findIndex(t => t.id === currentTrack?.id);
+    const prevIndex = (currentIndex - 1 + queue.length) % queue.length;
+    playTrack(queue[prevIndex]);
+  }, [queue, currentTrack, playTrack]);
+
   // Attach HTML5 Audio Event Listeners
   useEffect(() => {
     const audio = audioRef.current;
@@ -83,110 +187,17 @@ export const PlayerProvider = ({ children }) => {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [queue, currentTrack, isRepeat, isShuffle]);
-
-  // Web Audio Procedural Synth Sound Generator (Guarantees real sound even offline/CORS blocked)
-  const startSynthPlayback = () => {
-    try {
-      stopSynthPlayback();
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioCtx();
-        const gainNode = audioCtxRef.current.createGain();
-        gainNode.connect(audioCtxRef.current.destination);
-        audioCtxRef.current.gainNode = gainNode;
-      }
-
-      if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume();
-      }
-
-      const gainNode = audioCtxRef.current.gainNode;
-      gainNode.gain.value = (isMuted ? 0 : volume) * 0.15;
-
-      // Chord frequencies based on track index
-      const baseFreqs = [220, 261.63, 329.63, 392.00, 440];
-      const trackIndex = MOCK_SONGS.findIndex(s => s.id === currentTrack?.id);
-      const root = baseFreqs[trackIndex % baseFreqs.length] || 220;
-      
-      const freqs = [root, root * 1.25, root * 1.5];
-
-      synthNodesRef.current = freqs.map((freq) => {
-        const osc = audioCtxRef.current.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, audioCtxRef.current.currentTime);
-        osc.connect(gainNode);
-        osc.start();
-        return osc;
-      });
-    } catch (e) {
-      console.warn('Web Audio synth playback notice:', e);
-    }
-  };
-
-  const stopSynthPlayback = () => {
-    synthNodesRef.current.forEach((osc) => {
-      try { osc.stop(); osc.disconnect(); } catch (e) {}
-    });
-    synthNodesRef.current = [];
-  };
+  }, [handleNextTrack, startSynthPlayback, isRepeat]);
 
   // Timer interval for fallback progress tracking
   const simulatedIntervalRef = useRef(null);
-  const startTimerProgress = () => {
-    clearInterval(simulatedIntervalRef.current);
-    simulatedIntervalRef.current = setInterval(() => {
-      setCurrentTime((prev) => {
-        if (prev >= duration) {
-          clearInterval(simulatedIntervalRef.current);
-          handleNextTrack();
-          return 0;
-        }
-        return prev + 1;
-      });
-    }, 1000);
-  };
 
   useEffect(() => {
     if (!isPlaying) {
       clearInterval(simulatedIntervalRef.current);
       stopSynthPlayback();
     }
-  }, [isPlaying]);
-
-  // Main Play Track Function (Triggered on song card / playlist row click)
-  const playTrack = (track, newQueue = null) => {
-    if (newQueue) {
-      setQueue(newQueue);
-    }
-    
-    // Toggle play/pause if clicking currently active track
-    if (currentTrack?.id === track.id) {
-      togglePlay();
-      return;
-    }
-
-    setCurrentTrack(track);
-    setDuration(track.durationSeconds || 210);
-    setCurrentTime(0);
-
-    const audio = audioRef.current;
-    audio.src = track.audioUrl;
-    audio.currentTime = 0;
-    
-    audio.play()
-      .then(() => {
-        setIsPlaying(true);
-      })
-      .catch((err) => {
-        // Fallback to Synth + simulated timer if audio URL is blocked by network policy
-        setIsPlaying(true);
-        startSynthPlayback();
-        startTimerProgress();
-      });
-  };
+  }, [isPlaying, stopSynthPlayback]);
 
   // Toggle Play / Pause
   const togglePlay = () => {
@@ -206,7 +217,6 @@ export const PlayerProvider = ({ children }) => {
         .catch(() => {
           setIsPlaying(true);
           startSynthPlayback();
-          startTimerProgress();
         });
     }
   };
@@ -218,27 +228,6 @@ export const PlayerProvider = ({ children }) => {
       audio.currentTime = seconds;
     }
     setCurrentTime(seconds);
-  };
-
-  // Next Track in Queue
-  const handleNextTrack = () => {
-    if (!queue || queue.length === 0) return;
-    const currentIndex = queue.findIndex(t => t.id === currentTrack?.id);
-    let nextIndex;
-    if (isShuffle) {
-      nextIndex = Math.floor(Math.random() * queue.length);
-    } else {
-      nextIndex = (currentIndex + 1) % queue.length;
-    }
-    playTrack(queue[nextIndex]);
-  };
-
-  // Previous Track in Queue
-  const handlePrevTrack = () => {
-    if (!queue || queue.length === 0) return;
-    const currentIndex = queue.findIndex(t => t.id === currentTrack?.id);
-    const prevIndex = (currentIndex - 1 + queue.length) % queue.length;
-    playTrack(queue[prevIndex]);
   };
 
   const toggleLikeSong = (songId) => {

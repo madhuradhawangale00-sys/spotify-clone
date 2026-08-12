@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Grid, List, Search } from 'lucide-react';
+import { Plus, Heart, Grid, List } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { MOCK_ARTISTS, MOCK_ALBUMS } from '../data/mockData';
 
@@ -8,9 +8,6 @@ const LibraryView = () => {
 
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'playlists' | 'artists' | 'albums'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
-  const [filterQuery, setFilterQuery] = useState('');
-
-  const filterItem = (title) => title.toLowerCase().includes(filterQuery.toLowerCase());
 
   return (
     <div className="space-y-6 pb-12">
@@ -82,7 +79,7 @@ const LibraryView = () => {
 
           {/* User Playlists */}
           {(activeTab === 'all' || activeTab === 'playlists') &&
-            userPlaylists.filter(p => filterItem(p.title)).map((pl) => (
+            userPlaylists.map((pl) => (
               <div
                 key={pl.id}
                 onClick={() => navigateTo('playlist', pl.id)}
@@ -98,7 +95,7 @@ const LibraryView = () => {
 
           {/* Artists */}
           {(activeTab === 'all' || activeTab === 'artists') &&
-            MOCK_ARTISTS.filter(a => filterItem(a.name)).map((art) => (
+            MOCK_ARTISTS.map((art) => (
               <div
                 key={art.id}
                 onClick={() => navigateTo('artist', art.id)}
@@ -114,7 +111,7 @@ const LibraryView = () => {
 
           {/* Albums */}
           {(activeTab === 'all' || activeTab === 'albums') &&
-            MOCK_ALBUMS.filter(a => filterItem(a.title)).map((alb) => (
+            MOCK_ALBUMS.map((alb) => (
               <div
                 key={alb.id}
                 onClick={() => navigateTo('album', alb.id)}

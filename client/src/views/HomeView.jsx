@@ -14,7 +14,7 @@ const getGreeting = () => {
 };
 
 const HomeView = () => {
-  const { navigateTo, playTrack } = usePlayer();
+  const { navigateTo } = usePlayer();
 
   const quickPicks = [
     { title: 'Liked Songs', cover: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=300&auto=format&fit=crop', action: () => navigateTo('playlist', 'liked-songs') },

@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   ChevronDown, Heart, Shuffle, SkipBack, Play, Pause, 
-  SkipForward, Repeat, Volume2, VolumeX 
+  SkipForward, Repeat 
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 
@@ -29,9 +29,7 @@ const MobilePlayerModal = () => {
     isRepeat, 
     setIsRepeat, 
     likedSongIds, 
-    toggleLikeSong,
-    volume,
-    setVolume
+    toggleLikeSong
   } = usePlayer();
 
   if (!isMobilePlayerOpen || !currentTrack) return null;

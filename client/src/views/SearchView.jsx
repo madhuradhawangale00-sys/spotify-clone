@@ -2,12 +2,11 @@ import React from 'react';
 import { Search, Play } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { MOCK_SONGS, MOCK_ALBUMS, MOCK_ARTISTS, MOCK_GENRES } from '../data/mockData';
-import SongCard from '../components/SongCard';
 import AlbumCard from '../components/AlbumCard';
 import ArtistCard from '../components/ArtistCard';
 
 const SearchView = () => {
-  const { searchQuery, setSearchQuery, playTrack, navigateTo } = usePlayer();
+  const { searchQuery, setSearchQuery, playTrack } = usePlayer();
 
   const filteredSongs = MOCK_SONGS.filter(
     s => s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Search, Library, Plus, Heart, Music, Disc, User, ListMusic } from 'lucide-react';
+import { Home, Search, Library, Plus, Heart } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { MOCK_ARTISTS, MOCK_ALBUMS } from '../data/mockData';
 
