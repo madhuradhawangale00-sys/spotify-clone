@@ -27,18 +27,25 @@ export const PlayerProvider = ({ children }) => {
   const [likedSongIds, setLikedSongIds] = useState(['song-1', 'song-3', 'song-7']);
   const [userPlaylists, setUserPlaylists] = useState(MOCK_PLAYLISTS);
 
+  // HTML5 Audio API element ref
   const audioRef = useRef(new Audio());
-  const synthOscillatorRef = useRef(null);
-  const synthAudioCtxRef = useRef(null);
+  
+  // Web Audio Synth Node refs (used for fallback or rich synthesized ambient layer)
+  const audioCtxRef = useRef(null);
+  const synthNodesRef = useRef([]);
 
-  // Sync volume with audio element
+  // Sync Volume & Mute with HTML5 Audio & Web Audio Synth
   useEffect(() => {
+    const effectiveVolume = isMuted ? 0 : volume;
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+      audioRef.current.volume = effectiveVolume;
+    }
+    if (audioCtxRef.current && audioCtxRef.current.gainNode) {
+      audioCtxRef.current.gainNode.gain.value = effectiveVolume * 0.15;
     }
   }, [volume, isMuted]);
 
-  // Audio Event Listeners
+  // Attach HTML5 Audio Event Listeners
   useEffect(() => {
     const audio = audioRef.current;
 
@@ -55,15 +62,14 @@ export const PlayerProvider = ({ children }) => {
     const handleEnded = () => {
       if (isRepeat) {
         audio.currentTime = 0;
-        audio.play().catch(stopSynthFallback);
+        audio.play().catch(() => {});
       } else {
         handleNextTrack();
       }
     };
 
     const handleError = () => {
-      // If external audio source fails or blocked by CORS, trigger synthetic Web Audio tune fallback
-      startSynthFallback();
+      startSynthPlayback();
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -79,57 +85,57 @@ export const PlayerProvider = ({ children }) => {
     };
   }, [queue, currentTrack, isRepeat, isShuffle]);
 
-  // Handle Synthetic Web Audio fallback if MP3 fails to load
-  const startSynthFallback = () => {
+  // Web Audio Procedural Synth Sound Generator (Guarantees real sound even offline/CORS blocked)
+  const startSynthPlayback = () => {
     try {
-      if (!synthAudioCtxRef.current) {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) synthAudioCtxRef.current = new AudioCtx();
+      stopSynthPlayback();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioCtx();
+        const gainNode = audioCtxRef.current.createGain();
+        gainNode.connect(audioCtxRef.current.destination);
+        audioCtxRef.current.gainNode = gainNode;
       }
-    } catch (e) {
-      console.warn('Web Audio not supported');
-    }
-  };
 
-  const stopSynthFallback = () => {
-    if (synthOscillatorRef.current) {
-      try { synthOscillatorRef.current.stop(); } catch (e) {}
-      synthOscillatorRef.current = null;
-    }
-  };
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
 
-  // Play track function
-  const playTrack = (track, newQueue = null) => {
-    if (newQueue) {
-      setQueue(newQueue);
-    }
-    
-    if (currentTrack?.id === track.id) {
-      togglePlay();
-      return;
-    }
+      const gainNode = audioCtxRef.current.gainNode;
+      gainNode.gain.value = (isMuted ? 0 : volume) * 0.15;
 
-    setCurrentTrack(track);
-    setDuration(track.durationSeconds || 200);
-    setCurrentTime(0);
+      // Chord frequencies based on track index
+      const baseFreqs = [220, 261.63, 329.63, 392.00, 440];
+      const trackIndex = MOCK_SONGS.findIndex(s => s.id === currentTrack?.id);
+      const root = baseFreqs[trackIndex % baseFreqs.length] || 220;
+      
+      const freqs = [root, root * 1.25, root * 1.5];
 
-    const audio = audioRef.current;
-    audio.src = track.audioUrl;
-    audio.play()
-      .then(() => {
-        setIsPlaying(true);
-      })
-      .catch((err) => {
-        console.log('Audio playback fallback mode activated for:', track.title, err);
-        setIsPlaying(true);
-        // Start simulated timer if real audio source is restricted
-        startSimulatedProgress();
+      synthNodesRef.current = freqs.map((freq) => {
+        const osc = audioCtxRef.current.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtxRef.current.currentTime);
+        osc.connect(gainNode);
+        osc.start();
+        return osc;
       });
+    } catch (e) {
+      console.warn('Web Audio synth playback notice:', e);
+    }
   };
 
-  // Simulated progress timer if audio source is unavailable
+  const stopSynthPlayback = () => {
+    synthNodesRef.current.forEach((osc) => {
+      try { osc.stop(); osc.disconnect(); } catch (e) {}
+    });
+    synthNodesRef.current = [];
+  };
+
+  // Timer interval for fallback progress tracking
   const simulatedIntervalRef = useRef(null);
-  const startSimulatedProgress = () => {
+  const startTimerProgress = () => {
     clearInterval(simulatedIntervalRef.current);
     simulatedIntervalRef.current = setInterval(() => {
       setCurrentTime((prev) => {
@@ -146,33 +152,75 @@ export const PlayerProvider = ({ children }) => {
   useEffect(() => {
     if (!isPlaying) {
       clearInterval(simulatedIntervalRef.current);
+      stopSynthPlayback();
     }
   }, [isPlaying]);
 
+  // Main Play Track Function (Triggered on song card / playlist row click)
+  const playTrack = (track, newQueue = null) => {
+    if (newQueue) {
+      setQueue(newQueue);
+    }
+    
+    // Toggle play/pause if clicking currently active track
+    if (currentTrack?.id === track.id) {
+      togglePlay();
+      return;
+    }
+
+    setCurrentTrack(track);
+    setDuration(track.durationSeconds || 210);
+    setCurrentTime(0);
+
+    const audio = audioRef.current;
+    audio.src = track.audioUrl;
+    audio.currentTime = 0;
+    
+    audio.play()
+      .then(() => {
+        setIsPlaying(true);
+      })
+      .catch((err) => {
+        // Fallback to Synth + simulated timer if audio URL is blocked by network policy
+        setIsPlaying(true);
+        startSynthPlayback();
+        startTimerProgress();
+      });
+  };
+
+  // Toggle Play / Pause
   const togglePlay = () => {
     const audio = audioRef.current;
     if (isPlaying) {
       audio.pause();
+      stopSynthPlayback();
       setIsPlaying(false);
     } else {
       if (!audio.src && currentTrack) {
         audio.src = currentTrack.audioUrl;
       }
       audio.play()
-        .then(() => setIsPlaying(true))
+        .then(() => {
+          setIsPlaying(true);
+        })
         .catch(() => {
           setIsPlaying(true);
-          startSimulatedProgress();
+          startSynthPlayback();
+          startTimerProgress();
         });
     }
   };
 
+  // Seek Progress Bar (Seek to specific seconds)
   const seekTo = (seconds) => {
     const audio = audioRef.current;
-    audio.currentTime = seconds;
+    if (audio && !isNaN(seconds)) {
+      audio.currentTime = seconds;
+    }
     setCurrentTime(seconds);
   };
 
+  // Next Track in Queue
   const handleNextTrack = () => {
     if (!queue || queue.length === 0) return;
     const currentIndex = queue.findIndex(t => t.id === currentTrack?.id);
@@ -185,6 +233,7 @@ export const PlayerProvider = ({ children }) => {
     playTrack(queue[nextIndex]);
   };
 
+  // Previous Track in Queue
   const handlePrevTrack = () => {
     if (!queue || queue.length === 0) return;
     const currentIndex = queue.findIndex(t => t.id === currentTrack?.id);
