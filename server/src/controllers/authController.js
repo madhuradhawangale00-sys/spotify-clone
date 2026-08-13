@@ -77,7 +77,10 @@ export const loginUser = async (req, res) => {
 // @access  Private
 export const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password').populate('likedSongs');
+    const user = await User.findById(req.user._id)
+      .select('-password')
+      .populate('likedSongs')
+      .populate('recentlyPlayed');
 
     if (user) {
       res.json(user);
@@ -109,10 +112,51 @@ export const toggleLikeSong = async (req, res) => {
     }
 
     await user.save();
-    const updatedUser = await User.findById(req.user._id).select('-password').populate('likedSongs');
+    const updatedUser = await User.findById(req.user._id)
+      .select('-password')
+      .populate('likedSongs')
+      .populate('recentlyPlayed');
+
     res.json(updatedUser);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Add song to user's recently played list
+// @route   POST /api/auth/recently-played
+// @access  Private
+export const addRecentlyPlayed = async (req, res) => {
+  try {
+    const { songId } = req.body;
+    if (!songId) {
+      return res.status(400).json({ message: 'Song ID is required' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Remove if existing so it moves to front of recent history
+    user.recentlyPlayed = user.recentlyPlayed.filter(id => id.toString() !== songId.toString());
+    user.recentlyPlayed.unshift(songId);
+
+    // Keep top 20 recent songs
+    if (user.recentlyPlayed.length > 20) {
+      user.recentlyPlayed = user.recentlyPlayed.slice(0, 20);
+    }
+
+    await user.save();
+    const updatedUser = await User.findById(req.user._id)
+      .select('-password')
+      .populate('likedSongs')
+      .populate('recentlyPlayed');
+
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 

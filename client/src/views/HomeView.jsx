@@ -1,7 +1,7 @@
 import React from 'react';
-import { Play } from 'lucide-react';
+import { Play, History } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
-import { MOCK_SONGS, MOCK_ALBUMS, MOCK_ARTISTS, MOCK_PLAYLISTS } from '../data/mockData';
+import { MOCK_ALBUMS, MOCK_ARTISTS } from '../data/mockData';
 import SongCard from '../components/SongCard';
 import AlbumCard from '../components/AlbumCard';
 import ArtistCard from '../components/ArtistCard';
@@ -14,14 +14,14 @@ const getGreeting = () => {
 };
 
 const HomeView = () => {
-  const { navigateTo } = usePlayer();
+  const { navigateTo, songs, playlists, recentlyPlayed } = usePlayer();
 
   const quickPicks = [
     { title: 'Liked Songs', cover: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=300&auto=format&fit=crop', action: () => navigateTo('playlist', 'liked-songs') },
-    ...MOCK_PLAYLISTS.slice(0, 5).map(p => ({
+    ...playlists.slice(0, 5).map(p => ({
       title: p.title,
-      cover: p.coverUrl,
-      action: () => navigateTo('playlist', p.id)
+      cover: p.coverUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=300&auto=format&fit=crop',
+      action: () => navigateTo('playlist', p._id || p.id)
     }))
   ];
 
@@ -49,7 +49,7 @@ const HomeView = () => {
                 {pick.title}
               </span>
 
-              <button className="absolute right-4 w-11 h-11 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition duration-300 hover:scale-105">
+              <button className="absolute right-4 w-11 h-11 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition duration-300 hover:scale-105">
                 <Play className="w-5 h-5 fill-black translate-x-0.5" />
               </button>
             </div>
@@ -57,7 +57,25 @@ const HomeView = () => {
         </div>
       </section>
 
-      {/* Featured Songs */}
+      {/* Recently Played Songs Section */}
+      {recentlyPlayed && recentlyPlayed.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <History className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-2xl font-bold text-white tracking-tight">
+              Recently Played
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {recentlyPlayed.slice(0, 5).map((song) => (
+              <SongCard key={song._id || song.id} song={song} queue={recentlyPlayed} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Featured Songs from Backend */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-white tracking-tight hover:underline cursor-pointer">
@@ -72,8 +90,8 @@ const HomeView = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {MOCK_SONGS.slice(0, 5).map((song) => (
-            <SongCard key={song.id} song={song} queue={MOCK_SONGS} />
+          {songs.slice(0, 10).map((song) => (
+            <SongCard key={song._id || song.id} song={song} queue={songs} />
           ))}
         </div>
       </section>

@@ -36,6 +36,12 @@ const userSchema = new mongoose.Schema(
         ref: 'Song',
       },
     ],
+    recentlyPlayed: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Song',
+      },
+    ],
   },
   {
     timestamps: true,

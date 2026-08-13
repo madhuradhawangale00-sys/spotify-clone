@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Play, Pause, Heart, Clock, Search, MoreHorizontal, Shuffle } from 'lucide-react';
+import { Play, Pause, Heart, Clock, Search, MoreHorizontal, Trash2 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
-import { MOCK_SONGS } from '../data/mockData';
 
 const PlaylistView = () => {
   const { 
@@ -11,7 +10,9 @@ const PlaylistView = () => {
     playTrack, 
     togglePlay, 
     likedSongIds, 
-    toggleLikeSong 
+    toggleLikeSong,
+    songs,
+    removeSongFromPlaylist
   } = usePlayer();
 
   const [query, setQuery] = useState('');
@@ -20,23 +21,26 @@ const PlaylistView = () => {
   if (!entity) return null;
 
   // Resolve songs inside this playlist
-  const playlistSongs = entity.id === 'liked-songs'
-    ? MOCK_SONGS.filter(s => likedSongIds.includes(s.id))
-    : MOCK_SONGS.filter(s => (entity.songIds || []).includes(s.id));
+  const playlistSongs = entity.songs && Array.isArray(entity.songs) && entity.songs.length > 0 && typeof entity.songs[0] === 'object'
+    ? entity.songs
+    : entity.id === 'liked-songs' || entity._id === 'liked-songs'
+    ? songs.filter(s => likedSongIds.includes(s._id || s.id))
+    : songs.filter(s => (entity.songIds || []).includes(s._id || s.id));
 
   const displaySongs = playlistSongs.filter(s => 
     s.title.toLowerCase().includes(query.toLowerCase()) ||
     s.artist.toLowerCase().includes(query.toLowerCase())
   );
 
-  const isPlaylistPlaying = isPlaying && displaySongs.some(s => s.id === currentTrack?.id);
+  const currentId = currentTrack?._id || currentTrack?.id;
+  const isPlaylistPlaying = isPlaying && displaySongs.some(s => (s._id || s.id) === currentId);
 
   return (
     <div className="-mt-4 -mx-6 pb-12">
       {/* Dynamic Gradient Hero Header */}
-      <div className={`bg-gradient-to-b ${entity.gradient || 'from-indigo-900 via-zinc-900 to-[#121212]'} p-8 pt-12 flex flex-col md:flex-row items-end gap-6 shadow-2xl`}>
+      <div className={`bg-gradient-to-b ${entity.gradient || 'from-emerald-900 via-zinc-900 to-[#121212]'} p-8 pt-12 flex flex-col md:flex-row items-end gap-6 shadow-2xl`}>
         <img 
-          src={entity.coverUrl} 
+          src={entity.coverUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=600&auto=format&fit=crop'} 
           alt={entity.title} 
           className="w-48 h-48 sm:w-56 sm:h-56 rounded-md object-cover shadow-2xl shrink-0" 
         />
@@ -47,14 +51,12 @@ const PlaylistView = () => {
             {entity.title}
           </h1>
           <p className="text-sm text-gray-300 font-medium max-w-xl">
-            {entity.description}
+            {entity.description || 'Custom playlist'}
           </p>
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-300 pt-2">
-            <span className="text-white font-bold">{entity.owner || 'Spotify Clone'}</span>
+            <span className="text-white font-bold">{entity.owner?.name || entity.owner || 'Spotify Clone'}</span>
             <span>•</span>
             <span>{playlistSongs.length} songs</span>
-            <span>•</span>
-            <span>{entity.likes || 'Popular'}</span>
           </div>
         </div>
       </div>
@@ -70,7 +72,7 @@ const PlaylistView = () => {
                 playTrack(displaySongs[0], displaySongs);
               }
             }}
-            className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-xl hover:scale-105 transition transform"
+            className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shadow-xl hover:scale-105 transition transform"
           >
             {isPlaylistPlaying ? (
               <Pause className="w-7 h-7 fill-black" />
@@ -106,7 +108,7 @@ const PlaylistView = () => {
         {displaySongs.length === 0 ? (
           <div className="py-12 text-center text-gray-400">
             <p className="text-lg font-semibold">No songs found in this playlist</p>
-            <p className="text-xs mt-1">Try searching for something else or add songs.</p>
+            <p className="text-xs mt-1">Try adding songs from the home or search page.</p>
           </div>
         ) : (
           <table className="w-full text-left text-sm text-gray-400 select-none">
@@ -115,20 +117,21 @@ const PlaylistView = () => {
                 <th className="pb-3 w-10 text-center">#</th>
                 <th className="pb-3">Title</th>
                 <th className="pb-3 hidden md:table-cell">Album</th>
-                <th className="pb-3 hidden lg:table-cell">Date added</th>
-                <th className="pb-3 w-16 text-right pr-4">
+                <th className="pb-3 hidden lg:table-cell">Genre</th>
+                <th className="pb-3 w-20 text-right pr-4">
                   <Clock className="w-4 h-4 inline" />
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-transparent">
               {displaySongs.map((song, index) => {
-                const isCurrent = currentTrack?.id === song.id;
-                const isLiked = likedSongIds.includes(song.id);
+                const songId = song._id || song.id;
+                const isCurrent = currentId === songId;
+                const isLiked = likedSongIds.includes(songId);
 
                 return (
                   <tr
-                    key={song.id}
+                    key={songId}
                     onClick={() => playTrack(song, displaySongs)}
                     className={`group hover:bg-[#282828] cursor-pointer transition ${
                       isCurrent ? 'bg-[#282828]/50' : ''
@@ -138,9 +141,9 @@ const PlaylistView = () => {
                     <td className="py-3 text-center font-mono text-xs">
                       {isCurrent && isPlaying ? (
                         <div className="flex items-end justify-center gap-[2px] h-3">
-                          <span className="w-[3px] bg-green-500 rounded-full animate-bounce h-full"></span>
-                          <span className="w-[3px] bg-green-500 rounded-full animate-bounce h-2/3"></span>
-                          <span className="w-[3px] bg-green-500 rounded-full animate-bounce h-4/5"></span>
+                          <span className="w-[3px] bg-emerald-500 rounded-full animate-bounce h-full"></span>
+                          <span className="w-[3px] bg-emerald-500 rounded-full animate-bounce h-2/3"></span>
+                          <span className="w-[3px] bg-emerald-500 rounded-full animate-bounce h-4/5"></span>
                         </div>
                       ) : (
                         <>
@@ -159,7 +162,7 @@ const PlaylistView = () => {
                           className="w-10 h-10 rounded object-cover shrink-0" 
                         />
                         <div>
-                          <p className={`font-semibold text-sm truncate ${isCurrent ? 'text-green-500' : 'text-white'}`}>
+                          <p className={`font-semibold text-sm truncate ${isCurrent ? 'text-emerald-500' : 'text-white'}`}>
                             {song.title}
                           </p>
                           <p className="text-xs text-gray-400 truncate">{song.artist}</p>
@@ -169,27 +172,42 @@ const PlaylistView = () => {
 
                     {/* Album */}
                     <td className="py-3 hidden md:table-cell text-gray-400 hover:text-white truncate">
-                      {song.album}
+                      {song.album || 'Single'}
                     </td>
 
-                    {/* Date Added */}
+                    {/* Genre */}
                     <td className="py-3 hidden lg:table-cell text-gray-400 text-xs">
-                      {song.dateAdded || 'Recently'}
+                      {song.genre || 'Pop'}
                     </td>
 
-                    {/* Duration & Like */}
+                    {/* Duration, Like, and Remove */}
                     <td className="py-3 text-right pr-4 font-mono text-xs">
                       <div className="flex items-center justify-end gap-3">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleLikeSong(song.id);
+                            toggleLikeSong(songId);
                           }}
                           className="opacity-0 group-hover:opacity-100 transition"
+                          title="Like song"
                         >
-                          <Heart className={`w-4 h-4 ${isLiked ? 'text-green-500 fill-green-500 opacity-100' : 'text-gray-400'}`} />
+                          <Heart className={`w-4 h-4 ${isLiked ? 'text-emerald-500 fill-emerald-500 opacity-100' : 'text-gray-400 hover:text-white'}`} />
                         </button>
-                        <span>{song.duration}</span>
+
+                        {entity.id !== 'liked-songs' && entity._id !== 'liked-songs' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeSongFromPlaylist(entity._id || entity.id, songId);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition text-gray-400 hover:text-red-400"
+                            title="Remove from playlist"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        <span>{song.duration || '3:30'}</span>
                       </div>
                     </td>
                   </tr>

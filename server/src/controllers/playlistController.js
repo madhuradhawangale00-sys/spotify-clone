@@ -121,3 +121,71 @@ export const deletePlaylist = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Add a song to playlist
+// @route   POST /api/playlists/:id/songs
+// @access  Private
+export const addSongToPlaylist = async (req, res) => {
+  try {
+    const { songId } = req.body;
+    if (!songId) {
+      return res.status(400).json({ message: 'Song ID is required' });
+    }
+
+    const playlist = await Playlist.findById(req.params.id);
+
+    if (!playlist) {
+      return res.status(404).json({ message: 'Playlist not found' });
+    }
+
+    // Check ownership
+    if (playlist.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to modify this playlist' });
+    }
+
+    if (!playlist.songs.includes(songId)) {
+      playlist.songs.push(songId);
+      await playlist.save();
+    }
+
+    const updatedPlaylist = await Playlist.findById(req.params.id)
+      .populate('owner', 'name avatar')
+      .populate('songs');
+
+    res.json(updatedPlaylist);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Remove a song from playlist
+// @route   DELETE /api/playlists/:id/songs/:songId
+// @access  Private
+export const removeSongFromPlaylist = async (req, res) => {
+  try {
+    const { id, songId } = req.params;
+
+    const playlist = await Playlist.findById(id);
+
+    if (!playlist) {
+      return res.status(404).json({ message: 'Playlist not found' });
+    }
+
+    // Check ownership
+    if (playlist.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to modify this playlist' });
+    }
+
+    playlist.songs = playlist.songs.filter((s) => s.toString() !== songId);
+    await playlist.save();
+
+    const updatedPlaylist = await Playlist.findById(id)
+      .populate('owner', 'name avatar')
+      .populate('songs');
+
+    res.json(updatedPlaylist);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

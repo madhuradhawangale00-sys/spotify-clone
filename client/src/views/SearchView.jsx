@@ -1,17 +1,17 @@
 import React from 'react';
 import { Search, Play } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
-import { MOCK_SONGS, MOCK_ALBUMS, MOCK_ARTISTS, MOCK_GENRES } from '../data/mockData';
+import { MOCK_ALBUMS, MOCK_ARTISTS, MOCK_GENRES } from '../data/mockData';
 import AlbumCard from '../components/AlbumCard';
 import ArtistCard from '../components/ArtistCard';
 
 const SearchView = () => {
-  const { searchQuery, setSearchQuery, playTrack } = usePlayer();
+  const { searchQuery, setSearchQuery, playTrack, songs } = usePlayer();
 
-  const filteredSongs = MOCK_SONGS.filter(
+  const filteredSongs = songs.filter(
     s => s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
          s.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         s.genre.toLowerCase().includes(searchQuery.toLowerCase())
+         (s.genre && s.genre.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const filteredArtists = MOCK_ARTISTS.filter(
@@ -81,14 +81,14 @@ const SearchView = () => {
                     className="w-20 h-20 rounded-md object-cover shadow-lg mb-4"
                   />
                   <div>
-                    <h4 className="text-2xl font-extrabold text-white group-hover:text-green-400 transition">
+                    <h4 className="text-2xl font-extrabold text-white group-hover:text-emerald-400 transition">
                       {topResult.title}
                     </h4>
                     <p className="text-sm text-gray-400 mt-1">
                       Song • <span className="text-white font-medium">{topResult.artist}</span>
                     </p>
                   </div>
-                  <button className="absolute right-6 bottom-6 w-12 h-12 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition transform group-hover:scale-105">
+                  <button className="absolute right-6 bottom-6 w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition transform group-hover:scale-105">
                     <Play className="w-6 h-6 fill-black translate-x-0.5" />
                   </button>
                 </div>
@@ -99,20 +99,20 @@ const SearchView = () => {
             <div className="lg:col-span-2">
               <h3 className="text-xl font-bold text-white mb-4">Songs</h3>
               <div className="space-y-1">
-                {filteredSongs.slice(0, 4).map((song) => (
+                {filteredSongs.slice(0, 5).map((song) => (
                   <div
-                    key={song.id}
+                    key={song._id || song.id}
                     onClick={() => playTrack(song, filteredSongs)}
                     className="flex items-center justify-between p-2 rounded-md hover:bg-[#282828] cursor-pointer group transition"
                   >
                     <div className="flex items-center gap-3">
                       <img src={song.coverUrl} alt={song.title} className="w-10 h-10 rounded object-cover" />
                       <div>
-                        <p className="text-sm font-semibold text-white group-hover:text-green-400 transition">{song.title}</p>
+                        <p className="text-sm font-semibold text-white group-hover:text-emerald-400 transition">{song.title}</p>
                         <p className="text-xs text-gray-400">{song.artist}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-mono text-gray-400 pr-4">{song.duration}</span>
+                    <span className="text-xs font-mono text-gray-400 pr-4">{song.duration || '3:30'}</span>
                   </div>
                 ))}
               </div>

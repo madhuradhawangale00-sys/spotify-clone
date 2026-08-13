@@ -4,7 +4,9 @@ import {
   getPlaylistById, 
   createPlaylist, 
   updatePlaylist, 
-  deletePlaylist 
+  deletePlaylist,
+  addSongToPlaylist,
+  removeSongFromPlaylist
 } from '../controllers/playlistController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -19,4 +21,8 @@ router.route('/:id')
   .put(protect, updatePlaylist)
   .delete(protect, deletePlaylist);
 
+router.post('/:id/songs', protect, addSongToPlaylist);
+router.delete('/:id/songs/:songId', protect, removeSongFromPlaylist);
+
 export default router;
+
