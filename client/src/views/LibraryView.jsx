@@ -1,13 +1,47 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Grid, List } from 'lucide-react';
+import { Plus, Heart, Grid, List, Lock, LogIn, UserPlus } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
+import { useAuth } from '../context/AuthContext';
 import { MOCK_ARTISTS, MOCK_ALBUMS } from '../data/mockData';
 
 const LibraryView = () => {
   const { navigateTo, userPlaylists, createPlaylist, likedSongIds } = usePlayer();
+  const { isAuthenticated } = useAuth();
 
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'playlists' | 'artists' | 'albums'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center py-12 px-4">
+        <div className="text-center max-w-md bg-[#181818] border border-white/10 p-8 rounded-2xl shadow-2xl backdrop-blur-xl">
+          <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Protected Library</h2>
+          <p className="text-sm text-gray-400 mt-2 mb-6">
+            Log in to view your custom playlists, liked songs, and saved artists.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => navigateTo('login')}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 px-6 rounded-full transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4" />
+              Log In
+            </button>
+            <button
+              onClick={() => navigateTo('register')}
+              className="w-full bg-[#242424] hover:bg-[#2e2e2e] text-white font-semibold py-3 px-6 rounded-full border border-white/10 transition flex items-center justify-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Create an Account
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12">
@@ -18,7 +52,7 @@ const LibraryView = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={createPlaylist}
-            className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black font-bold text-xs px-4 py-2 rounded-full transition shadow-lg"
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs px-4 py-2 rounded-full transition shadow-lg"
           >
             <Plus className="w-4 h-4" />
             Create Playlist

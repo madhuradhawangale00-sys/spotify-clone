@@ -1,4 +1,5 @@
 import React from 'react';
+import { AuthProvider } from './context/AuthContext';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -13,6 +14,9 @@ import LibraryView from './views/LibraryView';
 import PlaylistView from './views/PlaylistView';
 import ArtistView from './views/ArtistView';
 import AlbumView from './views/AlbumView';
+import LoginView from './views/LoginView';
+import RegisterView from './views/RegisterView';
+import ProfileView from './views/ProfileView';
 
 const MainContent = () => {
   const { activeView } = usePlayer();
@@ -31,6 +35,12 @@ const MainContent = () => {
         return <ArtistView />;
       case 'album':
         return <AlbumView />;
+      case 'login':
+        return <LoginView />;
+      case 'register':
+        return <RegisterView />;
+      case 'profile':
+        return <ProfileView />;
       default:
         return <HomeView />;
     }
@@ -48,32 +58,34 @@ const MainContent = () => {
 
 function App() {
   return (
-    <PlayerProvider>
-      <div className="flex flex-col h-screen bg-black text-white font-sans overflow-hidden select-none">
-        {/* Main Interface Layout */}
-        <div className="flex flex-1 p-2 gap-2 overflow-hidden pb-20 md:pb-20">
-          {/* Sidebar Navigation (Desktop) */}
-          <div className="hidden md:block w-64 h-full shrink-0">
-            <Sidebar />
+    <AuthProvider>
+      <PlayerProvider>
+        <div className="flex flex-col h-screen bg-black text-white font-sans overflow-hidden select-none">
+          {/* Main Interface Layout */}
+          <div className="flex flex-1 p-2 gap-2 overflow-hidden pb-20 md:pb-20">
+            {/* Sidebar Navigation (Desktop) */}
+            <div className="hidden md:block w-64 h-full shrink-0">
+              <Sidebar />
+            </div>
+
+            {/* Center Main Dynamic View */}
+            <MainContent />
           </div>
 
-          {/* Center Main Dynamic View */}
-          <MainContent />
+          {/* Floating Queue Drawer */}
+          <QueueDrawer />
+
+          {/* Bottom Audio Player Bar */}
+          <Player />
+
+          {/* Mobile Navigation Bar */}
+          <MobileNav />
+
+          {/* Fullscreen Mobile Player Modal */}
+          <MobilePlayerModal />
         </div>
-
-        {/* Floating Queue Drawer */}
-        <QueueDrawer />
-
-        {/* Bottom Audio Player Bar */}
-        <Player />
-
-        {/* Mobile Navigation Bar */}
-        <MobileNav />
-
-        {/* Fullscreen Mobile Player Modal */}
-        <MobilePlayerModal />
-      </div>
-    </PlayerProvider>
+      </PlayerProvider>
+    </AuthProvider>
   );
 }
 

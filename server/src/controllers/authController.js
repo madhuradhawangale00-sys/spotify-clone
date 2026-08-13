@@ -88,3 +88,31 @@ export const getUserProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Toggle liked song for user
+// @route   POST /api/auth/like-song
+// @access  Private
+export const toggleLikeSong = async (req, res) => {
+  try {
+    const { songId } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const songIndex = user.likedSongs.indexOf(songId);
+    if (songIndex > -1) {
+      user.likedSongs.splice(songIndex, 1);
+    } else {
+      user.likedSongs.push(songId);
+    }
+
+    await user.save();
+    const updatedUser = await User.findById(req.user._id).select('-password').populate('likedSongs');
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
