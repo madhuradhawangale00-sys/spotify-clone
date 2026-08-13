@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { MOCK_ARTISTS, MOCK_ALBUMS } from '../data/mockData';
 
 const LibraryView = () => {
-  const { navigateTo, userPlaylists, createPlaylist, likedSongIds } = usePlayer();
+  const { navigateTo, userPlaylists, openCreatePlaylistModal, likedSongIds } = usePlayer();
   const { isAuthenticated } = useAuth();
 
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'playlists' | 'artists' | 'albums'
@@ -51,7 +51,7 @@ const LibraryView = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={createPlaylist}
+            onClick={openCreatePlaylistModal}
             className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs px-4 py-2 rounded-full transition shadow-lg"
           >
             <Plus className="w-4 h-4" />

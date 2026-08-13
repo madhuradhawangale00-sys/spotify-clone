@@ -356,19 +356,64 @@ export const PlayerProvider = ({ children }) => {
     }
   };
 
-  // Create Playlist via Axios
-  const createPlaylist = async (title = '', description = '') => {
-    const playlistTitle = title || `My Playlist #${playlists.length + 1}`;
-    
+  // State for Create Playlist Modal
+  const [isCreatePlaylistModalOpen, setIsCreatePlaylistModalOpen] = useState(false);
+
+  const openCreatePlaylistModal = () => setIsCreatePlaylistModalOpen(true);
+  const closeCreatePlaylistModal = () => setIsCreatePlaylistModalOpen(false);
+
+  // Create Playlist via Axios (Strictly serializable payload check)
+  const createPlaylist = async (data = {}) => {
+    let title = '';
+    let description = '';
+    let coverUrl = '';
+    let isPublic = true;
+
+    // Detect if 'data' is a React SyntheticEvent or DOM element (e.g. passed from onClick={createPlaylist})
+    const isEventOrDomElement = data && (
+      typeof data._reactName === 'string' ||
+      data.nativeEvent ||
+      data.target ||
+      data.currentTarget ||
+      data instanceof Element
+    );
+
+    if (!isEventOrDomElement) {
+      if (typeof data === 'string') {
+        title = data;
+      } else if (data && typeof data === 'object') {
+        title = data.title || '';
+        description = data.description || '';
+        coverUrl = data.coverUrl || '';
+        if (data.isPublic !== undefined) isPublic = data.isPublic;
+      }
+    }
+
+    const playlistTitle = (typeof title === 'string' && title.trim())
+      ? title.trim()
+      : `My Playlist #${playlists.length + 1}`;
+
+    const playlistDesc = (typeof description === 'string' && description.trim())
+      ? description.trim()
+      : 'Custom user created playlist';
+
+    const playlistCover = (typeof coverUrl === 'string' && coverUrl.trim())
+      ? coverUrl.trim()
+      : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=600&auto=format&fit=crop';
+
+    // Strictly serializable plain JavaScript object
+    const cleanPayload = {
+      title: playlistTitle,
+      description: playlistDesc,
+      coverUrl: playlistCover,
+      isPublic,
+    };
+
     if (isAuthenticated) {
       try {
-        const response = await playlistsApi.createPlaylist({
-          title: playlistTitle,
-          description: description || 'Custom user created playlist',
-          coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=600&auto=format&fit=crop',
-        });
+        const response = await playlistsApi.createPlaylist(cleanPayload);
         const newPl = response.data;
-        fetchPlaylists();
+        await fetchPlaylists();
         navigateTo('playlist', newPl._id || newPl.id);
         return newPl;
       } catch (err) {
@@ -381,9 +426,7 @@ export const PlayerProvider = ({ children }) => {
     const newPlaylist = {
       id: newId,
       _id: newId,
-      title: playlistTitle,
-      description: 'Custom user created playlist',
-      coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=600&auto=format&fit=crop',
+      ...cleanPayload,
       owner: user?.name || 'User',
       songIds: [],
       gradient: 'from-emerald-900 via-zinc-900 to-[#121212]'
@@ -503,6 +546,9 @@ export const PlayerProvider = ({ children }) => {
       createPlaylist,
       addSongToPlaylist,
       removeSongFromPlaylist,
+      isCreatePlaylistModalOpen,
+      openCreatePlaylistModal,
+      closeCreatePlaylistModal,
       playTrack,
       togglePlay,
       seekTo,

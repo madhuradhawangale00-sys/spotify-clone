@@ -7,6 +7,7 @@ import Player from './components/Player';
 import MobileNav from './components/MobileNav';
 import QueueDrawer from './components/QueueDrawer';
 import MobilePlayerModal from './components/MobilePlayerModal';
+import CreatePlaylistModal from './components/CreatePlaylistModal';
 
 import HomeView from './views/HomeView';
 import SearchView from './views/SearchView';
@@ -56,6 +57,11 @@ const MainContent = () => {
   );
 };
 
+const AppModalContainer = () => {
+  const { isCreatePlaylistModalOpen, closeCreatePlaylistModal } = usePlayer();
+  return <CreatePlaylistModal isOpen={isCreatePlaylistModalOpen} onClose={closeCreatePlaylistModal} />;
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -83,6 +89,9 @@ function App() {
 
           {/* Fullscreen Mobile Player Modal */}
           <MobilePlayerModal />
+
+          {/* Create Playlist Modal */}
+          <AppModalContainer />
         </div>
       </PlayerProvider>
     </AuthProvider>

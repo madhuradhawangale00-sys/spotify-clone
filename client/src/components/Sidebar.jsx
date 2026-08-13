@@ -8,7 +8,7 @@ const Sidebar = () => {
     activeView, 
     navigateTo, 
     userPlaylists, 
-    createPlaylist, 
+    openCreatePlaylistModal, 
     selectedEntityId,
     likedSongIds 
   } = usePlayer();
@@ -21,10 +21,10 @@ const Sidebar = () => {
           onClick={() => navigateTo('home')}
           className="flex items-center gap-3 px-2 cursor-pointer group mb-2"
         >
-          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center font-black text-black text-lg group-hover:scale-105 transition shadow-lg shadow-green-500/20">
+          <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center font-black text-black text-lg group-hover:scale-105 transition shadow-lg shadow-emerald-500/20">
             S
           </div>
-          <span className="font-bold text-white text-lg tracking-tight group-hover:text-green-400 transition">
+          <span className="font-bold text-white text-lg tracking-tight group-hover:text-emerald-400 transition">
             Spotify Clone
           </span>
         </div>
@@ -70,7 +70,7 @@ const Sidebar = () => {
           </button>
 
           <button
-            onClick={createPlaylist}
+            onClick={openCreatePlaylistModal}
             title="Create playlist"
             className="p-1.5 rounded-full hover:bg-[#282828] text-gray-400 hover:text-white transition"
           >
