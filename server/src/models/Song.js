@@ -41,6 +41,14 @@ const songSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    artistRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Artist',
+    },
+    albumRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Album',
+    },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

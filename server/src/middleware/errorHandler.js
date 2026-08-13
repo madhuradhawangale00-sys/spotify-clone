@@ -5,9 +5,33 @@ export const notFound = (req, res, next) => {
 };
 
 export const errorHandler = (err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let message = err.message;
+
+  // Handle Mongoose Bad ObjectId (CastError)
+  if (err.name === 'CastError') {
+    message = `Resource not found`;
+    statusCode = 404;
+  }
+
+  // Handle Mongoose Duplicate Key Error (Code 11000)
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    message = `Duplicate value entered for ${field}. Please use another value.`;
+    statusCode = 400;
+  }
+
+  // Handle Mongoose Validation Error
+  if (err.name === 'ValidationError') {
+    message = Object.values(err.errors)
+      .map((val) => val.message)
+      .join(', ');
+    statusCode = 400;
+  }
+
   res.status(statusCode).json({
-    message: err.message,
+    success: false,
+    message,
     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
   });
 };
